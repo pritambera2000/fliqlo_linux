@@ -1,7 +1,6 @@
 /*
-* Gluqlo: Fliqlo for Linux
-* https://github.com/alexanderk23/gluqlo
-*
+* Gluqlo: Fliqlo for Linux Modified by Pritam for his pop_os!
+* https://github.com/alexanderk23/gluqlo (Original repo)
 * Copyright (c) 2010-2012 Kuźniarski Jacek
 * Copyright (c) 2014 Alexander Kovalenko
 *
@@ -33,17 +32,17 @@
 #define FONT "/usr/share/gluqlo/gluqlo.ttf"
 #endif
 
-const char* TITLE = "Gluqlo 1.1";
+const char* TITLE = "Pritam's Flipflop clock";
 const int DEFAULT_WIDTH = 1024;
 const int DEFAULT_HEIGHT = 768;
 
-bool twentyfourh = true;
+bool twentyfourh = false;
 bool leadingzero = false;
 bool fullscreen = false;
 bool animate = true;
 bool anykeyclose = false;
 
-int past_h = -1, past_m = -1;
+int past_h = -1, past_m = -1, past_s = -1;
 
 int width = DEFAULT_WIDTH;
 int height = DEFAULT_HEIGHT;
@@ -58,6 +57,7 @@ SDL_Surface *screen;
 
 SDL_Rect hourBackground;
 SDL_Rect minBackground;
+SDL_Rect secBackground;
 
 SDL_Rect bgrect;
 SDL_Surface *bg;
@@ -268,6 +268,13 @@ void render_clock(int maxsteps, int step) {
 		snprintf(buffer2, 3, "%02d", past_m);
 		render_digits(screen, &minBackground, buffer, buffer2, maxsteps, step);
 	}
+	// draw seconds
+	if(_time->tm_sec != past_s) {
+    snprintf(buffer, 3, "%02d", _time->tm_sec);
+    snprintf(buffer2, 3, "%02d", past_s);
+    render_digits(screen, &secBackground, buffer, buffer2, maxsteps, step);
+	}
+
 
 	// flip backbuffer
 	SDL_Flip(screen);
@@ -275,6 +282,7 @@ void render_clock(int maxsteps, int step) {
 	if(step == maxsteps-1) {
 		past_h = _time->tm_hour;
 		past_m = _time->tm_min;
+		past_s = _time->tm_sec;
 	}
 }
 
@@ -310,16 +318,16 @@ Uint32 update_time(Uint32 interval, void *param) {
 	time(&rawtime);
 	time_i = localtime(&rawtime);
 
-	if(time_i->tm_min != past_m) {
-		e.type = SDL_USEREVENT;
-		e.user.code = 0;
-		e.user.data1 = NULL;
-		e.user.data2 = NULL;
-		SDL_PushEvent(&e);
-		interval = 1000 * (60 - time_i->tm_sec) - 250;
-	} else {
-		interval = 250;
-	}
+if(time_i->tm_sec != past_s) {
+    e.type = SDL_USEREVENT;
+    e.user.code = 0;
+    e.user.data1 = NULL;
+    e.user.data2 = NULL;
+    SDL_PushEvent(&e);
+    interval = 1000 - 250;
+} else {
+    interval = 250;
+}
 
 	return interval;
 }
@@ -448,20 +456,20 @@ int main(int argc, char** argv ) {
 	int radius;
 
 	if (is_horizontal) {
-		rectsize = height * 0.6;
-		spacing = width * .031;
+		rectsize = height * 0.59;
+		spacing = width * 0.06;
 		radius =  height * .05714;
 	}
 	else {
-		rectsize = width * 0.6;
-		spacing = height * .031;
+		rectsize = width * 0.59;
+		spacing = height * 0.06;
 		radius =  width * .05714;
 	}
 
 	int jitter_width  = 1;
 	int jitter_height = 1;
 	if (display_scale_factor != 1) {
-		jitter_width  = (screen->w - width) * 0.5;
+		jitter_width  = (screen->w - width) * 25;
 		jitter_height = (screen->h - height) * 0.5;
 	}
 
@@ -469,22 +477,28 @@ int main(int argc, char** argv ) {
 	hourBackground.h = rectsize;
 	minBackground.w = rectsize;
 	minBackground.h = rectsize;
+	secBackground.w = rectsize;
+	secBackground.h = rectsize;
 
 	if (is_horizontal) {
-		hourBackground.x = 0.5 * (width - (0.031 * width) - (1.2 * height))
-										+ jitter_width;
-		hourBackground.y = 0.2 * height + jitter_height;
+    	hourBackground.x = jitter_width - 20.5;
+    	hourBackground.y = 0.2 * height + jitter_height;
 
-		minBackground.x = hourBackground.x + (0.6 * height) + spacing;
-		minBackground.y = hourBackground.y;
-	}
+    	minBackground.x = hourBackground.x + (0.5 * height) + spacing;
+    	minBackground.y = hourBackground.y;
+
+    	secBackground.x = minBackground.x + (0.5 * height) + spacing;
+    	secBackground.y = hourBackground.y;
+	} 
 	else {
-		hourBackground.y = 0.5 * (height - (0.031 * height) - (1.2 * width))
-										+ jitter_height;
-		hourBackground.x = 0.2 * width + jitter_width;
+    	hourBackground.y = jitter_height - 20.5;
+    	hourBackground.x = 0.2 * width + jitter_width;
 
-		minBackground.y = hourBackground.y + (0.6 * width) + spacing;
-		minBackground.x = hourBackground.x;
+    	minBackground.y = hourBackground.y + (0.6 * width) + spacing;
+    	minBackground.x = hourBackground.x;
+
+    	secBackground.y = minBackground.y + (0.6 * width) + spacing;
+    	secBackground.x = hourBackground.x;
 	}
 
 	// create background surface
@@ -518,7 +532,7 @@ int main(int argc, char** argv ) {
 				}
 				switch(event.key.keysym.sym) {
 					case SDLK_ESCAPE:
-					case SDLK_q:
+					case SDLK_p:
 						done = true;
 						break;
 					default:
